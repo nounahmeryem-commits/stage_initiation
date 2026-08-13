@@ -1,0 +1,10 @@
+pandas
+pdfplumber
+SQLAlchemy
+psycopg2-binary
+python-dotenv
+fastapi>=0.110
+uvicorn[standard]>=0.29
+anthropic>=0.34
+watchdog>=4.0.0
+pydantic>=2.6
