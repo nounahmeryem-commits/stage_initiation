@@ -39,8 +39,8 @@ class RendementExtractor:
             ("frigo",     280,   305),
             ("fournisseur", 305, 385),
             ("br",        385,   450),
-            ("poids",     450,   500),
-            ("origine",   500,   560),
+            ("poids",     450,   497),
+            ("origine",   497,   560),
             ("moule",     560,   610),
             ("pct_poids", 610,   670),
             ("filets",    670,   725),
@@ -79,9 +79,25 @@ class RendementExtractor:
         except ValueError:
             return None
 
-    def _column_for_x(self, x0):
+    def _column_for_x(self, x0, x1=None):
+        """
+        Determine la colonne d'un mot a partir de sa position horizontale.
+
+        [correctif robustesse] On utilise le CENTRE du mot ((x0+x1)/2)
+        plutot que son bord gauche (x0) seul. Le bord gauche d'un mot
+        depend de sa longueur : un mot large qui commence pile sur une
+        frontiere de colonne (ex. "Mohamadia", x0=499.4, alors que la
+        frontiere poids/origine etait a 500) se faisait alors classer
+        dans la mauvaise colonne, polluant les valeurs numeriques
+        voisines (poids devenait illisible -> None) et laissant la
+        colonne cible vide. Le centre du mot tombe presque toujours
+        dans sa colonne visuelle, meme si le bord gauche deborde
+        legerement sur la colonne precedente. Si x1 n'est pas fourni
+        (retro-compatibilite), on retombe sur x0 seul.
+        """
+        x_ref = (x0 + x1) / 2 if x1 is not None else x0
         for name, x_min, x_max in self.columns:
-            if x_min <= x0 < x_max:
+            if x_min <= x_ref < x_max:
                 return name
         return None
 
@@ -143,7 +159,7 @@ class RendementExtractor:
                         return
                     bucket = {}
                     for w in sorted(current_words, key=lambda w: w["x0"]):
-                        col = self._column_for_x(w["x0"])
+                        col = self._column_for_x(w["x0"], w["x1"])
                         if col is None:
                             continue
                         bucket.setdefault(col, []).append(w["text"])
@@ -325,5 +341,44 @@ class RendementExtractor:
             "df_entrees": df_entrees,
             "df_summary": df_rendement
         }
+
+
+def tester_extracteur(pdf_path):
+    try:
+        print("=" * 70)
+        print("TEST DE L'EXTRACTEUR")
+        print("=" * 70)
+        print(f"PDF : {pdf_path}")
+
+        extractor = RendementExtractor(pdf_path)
+
+        resultat = extractor.extract()
+
+        print("\nExtraction réussie !")
+        print("-" * 70)
+
+        if isinstance(resultat, dict):
+            for cle, valeur in resultat.items():
+                print(f"\n### {cle} ###")
+
+                if hasattr(valeur, "shape"):
+                    print(f"Dimensions : {valeur.shape}")
+                    print(valeur.head(10))
+                else:
+                    print(valeur)
+        else:
+            print(resultat)
+
+        return resultat
+
+    except Exception as e:
+        print("\nERREUR pendant l'extraction :")
+        print(type(e).__name__, ":", e)
+
+        import traceback
+        traceback.print_exc()
+
+        return None
+
 
 
